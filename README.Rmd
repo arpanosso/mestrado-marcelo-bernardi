@@ -25,7 +25,8 @@ library(tidyverse)
 ## Carregando Dados
 
 ```{r}
-data_set <- readr::read_rds("data/data-icm.rds")
+data_set <- readr::read_rds("data/data-icm.rds") |> 
+  filter(tratamento != 1)
 data_set |>  glimpse()
 ```
 
@@ -63,6 +64,73 @@ data_set |>
 ## Tabela de Médias
 
 ```{r}
-
+data_set |> 
+  group_by(tratamento, dose) |> 
+  summarise(
+    imc1 = mean(icm_1,na.rm=TRUE),
+    imc2 = mean(icm_2,na.rm=TRUE),
+  ) |> 
+  writexl::write_xlsx("output/tabela-medias.xlsx")
 ```
 
+
+## Análise de variância - DIA 1
+```{r}
+trat <- interaction(data_set$tratamento,data_set$dose)
+icm_1 <- data_set$icm_1 + 1
+yt <- (icm_1/100+1)^1.95959596
+mod1 <- aov(yt ~ trat)
+anova(mod1)
+rs <- rstudent(mod1)
+yp <- predict(mod1)
+hist(rs)
+shapiro.test(rs)
+lawstat::levene.test(yt,trat)
+bxc <- MASS::boxcox(mod1)
+# data.frame(bxc$y,bxc$x) |> arrange(desc(bxc.y))
+```
+
+```{r}
+filtro <- data_set$tratamento != 18
+trat <- data_set$tratamento[filtro]
+dose <- data_set$dose[filtro]
+rep <- data_set$repeticao[filtro]
+y <- data_set$icm_1[filtro]
+yad <- data_set$icm_1[!filtro]
+
+ExpDes.pt::fat2.ad.dic(trat, dose, rep, y, yad,
+                       mcomp = "tukey",
+                       quali = c(TRUE, TRUE),
+                       fac.names = c("Extrato","Dose"))
+```
+
+
+## Análise de variância - DIA 2
+```{r}
+trat <- interaction(data_set$tratamento,data_set$dose)
+icm_2 <- data_set$icm_2 + 1
+yt <- (icm_2/100+1)^1.95959596
+mod2 <- aov(icm_2 ~ trat)
+anova(mod2)
+rs <- rstudent(mod2)
+yp <- predict(mod2)
+hist(rs)
+shapiro.test(rs)
+lawstat::levene.test(yt,trat)
+bxc <- MASS::boxcox(mod2)
+# data.frame(bxc$y,bxc$x) |> arrange(desc(bxc.y))
+```
+
+```{r}
+filtro <- data_set$tratamento != 18
+trat <- data_set$tratamento[filtro]
+dose <- data_set$dose[filtro]
+rep <- data_set$repeticao[filtro]
+y <- data_set$icm_2[filtro]
+yad <- data_set$icm_2[!filtro]
+
+ExpDes.pt::fat2.ad.dic(trat, dose, rep, y, yad,
+                       mcomp = "tukey",
+                       quali = c(TRUE, TRUE),
+                       fac.names = c("Extrato","Dose"))
+```
